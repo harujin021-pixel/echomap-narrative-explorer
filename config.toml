@@ -1,0 +1,20 @@
+# Streamlit 全局配置
+# 禁止收集使用统计，避免首次启动时询问邮箱
+[browser]
+gatherUsageStats = false
+
+# 服务端配置
+[server]
+# 文件变更时自动重载（开发时方便）
+fileWatcherType = "auto"
+# 禁止在浏览器中自动打开（可选）
+# headless = false
+
+# 主题：浅色专业简洁（白底 + 深蓝强调色 + 清晰排版）
+[theme]
+base = "light"
+primaryColor = "#1F4E79"            # 深蓝强调色：主按钮、选中态、滑块
+backgroundColor = "#FFFFFF"          # 页面主背景
+secondaryBackgroundColor = "#F4F6F9" # 侧边栏 / 次级区块背景
+textColor = "#1A2332"                # 正文文字（近黑深灰）
+font = "sans serif"                  # 无衬线字体，保持干净利落
