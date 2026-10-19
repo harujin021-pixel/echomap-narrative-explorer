@@ -1,0 +1,6 @@
+id,title,content,source,author,published_at,url,data_source
+1," 合成示例：城市交通新政策 ","这是合成的测试正文，仅用于验证清洗流程。",示例媒体甲,张三,2024-05-01,https://example.invalid/a,synthetic_test_fixture
+2,合成示例：环境报道,合成的测试正文第二条。,示例媒体乙,李四,2024-13-40,https://example.invalid/b,synthetic_test_fixture
+2,合成示例：环境报道,合成的测试正文第二条。,示例媒体乙,李四,2024-13-40,https://example.invalid/b,synthetic_test_fixture
+4,合成示例：缺失正文,,示例媒体甲,王五,2024-06-15,https://example.invalid/c,synthetic_test_fixture
+5,,这是缺标题的合成正文。,示例媒体丙,,,https://example.invalid/d,synthetic_test_fixture

@@ -1,0 +1,7 @@
+id,title,content,source,author,published_at,url,data_source
+1,合成示例：城市地铁新线路开通,本市地铁新线路今日开通，早高峰通勤时间明显缩短。交通部门表示将增加班次并优化换乘。,示例媒体甲,张三,2024/5/1,https://example.invalid/a,synthetic_test_fixture
+2,合成示例：公交专用道调整,交通部门宣布调整公交专用道，以缓解早晚高峰拥堵，提升通勤效率。,示例媒体乙,李四,2024/5/2,https://example.invalid/b,synthetic_test_fixture
+3,合成示例：城市空气质量改善,环保监测数据显示本月空气质量改善，颗粒物浓度下降，居民户外活动增多。,示例媒体甲,张三,2024/5/3,https://example.invalid/c,synthetic_test_fixture
+4,合成示例：河流水质治理进展,环保部门推进河流水质治理，水质监测指标改善，水生态恢复受到关注。,示例媒体丙,王五,2024/5/4,https://example.invalid/d,synthetic_test_fixture
+5,合成示例：高校成立人工智能实验室,高校成立人工智能实验室，专注机器学习算法研究与技术成果转化。,,李四,2024/5/5,https://example.invalid/e,synthetic_test_fixture
+6,合成示例：开源软件社区举办大会,开源软件社区举办开发者大会，讨论代码协作与机器学习工具生态。,示例媒体丁,赵六,2024/5/6,https://example.invalid/f,synthetic_test_fixture

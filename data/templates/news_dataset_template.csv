@@ -1,0 +1,4 @@
+id,title,content,source,author,published_at,url,data_source
+1,合成示例：城市地铁新线路开通,本市地铁三号线今日正式开通运营,合成示例媒体甲,示例记者A,2024-03-01,https://example.com/news/1,synthetic_template
+2,合成示例：本地图书馆举办阅读活动,市图书馆本周举办春季阅读推广活动,合成示例媒体乙,示例记者B,2024-03-02,,synthetic_template
+3,合成示例：社区公园绿化改造完成,社区公园绿化改造工程近日完工开放,合成示例媒体丙,,2024-03-03,https://example.com/news/3,synthetic_template
