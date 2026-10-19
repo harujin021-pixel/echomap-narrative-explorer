@@ -1,0 +1,11 @@
+[browser]
+gatherUsageStats = false
+[server]
+fileWatcherType = "auto"
+[theme]
+base = "light"
+primaryColor = "#1F4E79"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F4F6F9"
+textColor = "#1A2332"
+font = "sans serif"
