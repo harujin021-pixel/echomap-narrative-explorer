@@ -330,7 +330,7 @@ Phase progress, commands that were run, and real test results are all recorded i
 
 EchoMap 是一个面向数字媒体研究的交互式分析工具。它通过**可解释的文本挖掘方法**
 （TF-IDF 关键词、TextRank 抽取式摘要、KMeans 主题聚类、余弦相似度）探索新闻文本的
-主题结构、关键词与文章间文本相似性，辅助理解新闻内容的结构特征。
+主题结构、关键词与文章间文本相似性，辅助理解新闻内容的结构特征.  
 
 核心研究问题：
 
