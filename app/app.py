@@ -46,14 +46,17 @@ from src.ai.provider import (
     ENV_GEMINI_MODEL,
     ENV_GROQ_MODEL,
     ENV_OLLAMA_MODEL,
+    ENV_SILICONFLOW_MODEL,
     PROVIDER_GEMINI,
     PROVIDER_MOCK,
     PROVIDER_GROQ,
     PROVIDER_OLLAMA,
+    PROVIDER_SILICONFLOW,
     GeminiProvider,
     GroqProvider,
     MockProvider,
     OllamaProvider,
+    SiliconFlowProvider,
     get_provider,
 )
 from src.ai.safety import analyze_text, category_counts
@@ -445,15 +448,18 @@ def _backend_options() -> list[str]:
     """返回当前环境下实际可用的模型后端选项。
 
     mock 与 ollama 始终保留（本机是否可用由界面提示判断）；
-    gemini / groq 只在配置了密钥时出现——避免未配置密钥的部署里，
+    gemini / groq / siliconflow 只在配置了密钥时出现——避免未配置密钥的部署里，
     评审点开下拉就看到一个必然失败、且提示"未配置密钥"的选项。
     后端代码不删：配好密钥后选项会自动出现，无需改代码或重启应用。
+    SiliconFlow 是国内可访问的免费 API（硅基流动），适合中国大陆用户。
     """
     options = [PROVIDER_MOCK, PROVIDER_OLLAMA]
     if GeminiProvider().is_available():
         options.append(PROVIDER_GEMINI)
     if GroqProvider().is_available():
         options.append(PROVIDER_GROQ)
+    if SiliconFlowProvider().is_available():
+        options.append(PROVIDER_SILICONFLOW)
     return options
 
 
@@ -1267,6 +1273,18 @@ def _show_copywriting(result: dict, lang: str, chosen_rec: dict) -> None:
         else:
             st.warning(t("cp_groq_no_key", lang))
         st.warning(t("cp_groq_notice", lang))
+    elif backend == PROVIDER_SILICONFLOW:
+        model = st.text_input(
+            t("cp_sf_model_label", lang),
+            value=os.environ.get(ENV_SILICONFLOW_MODEL, ""),
+            key="cp_sf_model_name",
+        )
+        provider = SiliconFlowProvider(model=model or None)
+        if provider.is_available():
+            st.success(t("cp_sf_ready", lang))
+        else:
+            st.warning(t("cp_sf_no_key", lang))
+        st.warning(t("cp_sf_notice", lang))
     else:
         provider = MockProvider()
         st.warning(t("cp_mock_notice", lang))
