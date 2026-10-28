@@ -49,16 +49,21 @@ ENV_GEMINI_TIMEOUT = "ECHOMAP_GEMINI_TIMEOUT"
 ENV_GROQ_API_KEY = "ECHOMAP_GROQ_API_KEY"
 ENV_GROQ_MODEL = "ECHOMAP_GROQ_MODEL"
 ENV_GROQ_TIMEOUT = "ECHOMAP_GROQ_TIMEOUT"
+ENV_SILICONFLOW_API_KEY = "ECHOMAP_SILICONFLOW_API_KEY"
+ENV_SILICONFLOW_MODEL = "ECHOMAP_SILICONFLOW_MODEL"
+ENV_SILICONFLOW_TIMEOUT = "ECHOMAP_SILICONFLOW_TIMEOUT"
 
 PROVIDER_MOCK = "mock"
 PROVIDER_OLLAMA = "ollama"
 PROVIDER_GEMINI = "gemini"
 PROVIDER_GROQ = "groq"
+PROVIDER_SILICONFLOW = "siliconflow"
 AVAILABLE_PROVIDERS: tuple[str, ...] = (
     PROVIDER_MOCK,
     PROVIDER_OLLAMA,
     PROVIDER_GEMINI,
     PROVIDER_GROQ,
+    PROVIDER_SILICONFLOW,
 )
 
 DEFAULT_PROVIDER = PROVIDER_MOCK
@@ -75,6 +80,11 @@ DEFAULT_GEMINI_TIMEOUT = 60.0
 GROQ_API_BASE = "https://api.groq.com/openai/v1"
 DEFAULT_GROQ_MODEL = "llama-3.3-70b-versatile"
 DEFAULT_GROQ_TIMEOUT = 60.0
+
+# SiliconFlow 官方 OpenAI 兼容接口（国内可访问，免费额度充足，手机号注册即可）
+SILICONFLOW_API_BASE = "https://api.siliconflow.cn/v1"
+DEFAULT_SILICONFLOW_MODEL = "deepseek-ai/DeepSeek-V3"
+DEFAULT_SILICONFLOW_TIMEOUT = 60.0
 
 
 class ProviderUnavailableError(RuntimeError):
@@ -421,6 +431,129 @@ class GroqProvider:
         return content
 
 
+class SiliconFlowProvider:
+    """SiliconFlow 国内在线后端（免费额度）—— 中国大陆可直接访问，手机号注册即可。
+
+    走 SiliconFlow 官方 OpenAI 兼容接口（/chat/completions），不依赖翻墙或
+    海外代理。与 Groq/Gemini/Ollama 后端同构（.name + .render），界面零改动
+    即可切换。密钥读取与失败处理同 Groq：绝不硬编码、绝不回显、绝不伪造结果。
+    """
+
+    name = PROVIDER_SILICONFLOW
+
+    def __init__(
+        self,
+        model: str | None = None,
+        api_key: str | None = None,
+        timeout: float | None = None,
+    ) -> None:
+        self.model = (
+            model
+            or os.environ.get(ENV_SILICONFLOW_MODEL, "")
+            or DEFAULT_SILICONFLOW_MODEL
+        ).strip()
+        self.api_key = (
+            api_key if api_key is not None else _siliconflow_api_key()
+        ).strip()
+        self.timeout = (
+            timeout if timeout is not None else _siliconflow_timeout_from_env()
+        )
+
+    def is_available(self) -> bool:
+        """是否已配置密钥；不做网络探测，避免无谓请求消耗配额。"""
+        return bool(self.api_key)
+
+    def render(self, request: GenerationRequest) -> str:
+        if not self.api_key:
+            raise ProviderUnavailableError(
+                "在线模型后端（SiliconFlow）已启用，但未配置 API 密钥："
+                f"请设置环境变量 {ENV_SILICONFLOW_API_KEY}，或在部署平台的 "
+                "Secrets 中添加该键后重新运行。"
+            )
+
+        prompt = build_prompt(request)
+        url = f"{SILICONFLOW_API_BASE}/chat/completions"
+        payload = {
+            "model": self.model,
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": 0.7,
+        }
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+        }
+
+        try:
+            response = requests.post(
+                url, json=payload, headers=headers, timeout=self.timeout
+            )
+        except requests.exceptions.Timeout as exc:
+            raise ProviderUnavailableError(
+                f"在线模型生成超时（超过 {self.timeout:.0f} 秒）：请稍后重试，"
+                "或改用 mock 后端。"
+            ) from exc
+        except requests.exceptions.ConnectionError as exc:
+            raise ProviderUnavailableError(
+                "无法连接 SiliconFlow 服务（api.siliconflow.cn）："
+                "请检查网络后重试，或改用 mock 后端。"
+            ) from exc
+        except requests.exceptions.RequestException as exc:
+            raise ProviderUnavailableError(
+                f"调用 SiliconFlow 服务失败：{exc}"
+            ) from exc
+
+        if response.status_code in (401, 403):
+            raise ProviderUnavailableError(
+                f"SiliconFlow 拒绝了本次请求（HTTP {response.status_code}）："
+                f"API 密钥无效或未授权，请核对 {ENV_SILICONFLOW_API_KEY}。"
+            )
+        if response.status_code == 429:
+            raise ProviderUnavailableError(
+                "SiliconFlow 已达免费额度或速率上限（HTTP 429）：请稍后重试，"
+                "或在界面切换到另一个在线后端或 mock 后端。"
+            )
+        if response.status_code == 404:
+            raise ProviderUnavailableError(
+                f"SiliconFlow 未找到「{self.model}」：请核对环境变量 "
+                f"{ENV_SILICONFLOW_MODEL} 中的模型名。"
+            )
+        if response.status_code != 200:
+            raise ProviderUnavailableError(
+                f"SiliconFlow 返回错误（HTTP {response.status_code}）："
+                f"{response.text[:200]}"
+            )
+
+        try:
+            data = response.json()
+        except ValueError as exc:
+            raise ProviderUnavailableError(
+                "SiliconFlow 返回内容无法解析为 JSON，未生成文案。"
+            ) from exc
+
+        error = data.get("error")
+        if error:
+            message = error.get("message") if isinstance(error, dict) else str(error)
+            raise ProviderUnavailableError(
+                f"SiliconFlow 的安全策略拦截了本次请求：{str(message)[:200]}"
+            )
+
+        choices = data.get("choices") or []
+        if not choices:
+            raise ProviderUnavailableError("SiliconFlow 未返回任何候选内容：请重试。")
+        content = str(
+            (choices[0].get("message") or {}).get("content") or ""
+        ).strip()
+        if not content:
+            finish_reason = str(choices[0].get("finish_reason") or "").strip()
+            if finish_reason and finish_reason != "stop":
+                raise ProviderUnavailableError(
+                    f"SiliconFlow 未生成正文（finish_reason={finish_reason}）："
+                    "请重试。"
+                )
+            raise ProviderUnavailableError("SiliconFlow 返回了空内容：请重试。")
+        return content
+
+
 def _timeout_from_env() -> float:
     """读取超时环境变量；缺省或非法值退回默认，非正值一律视为非法。"""
     raw = os.environ.get(ENV_OLLAMA_TIMEOUT, "")
@@ -480,6 +613,21 @@ def _groq_api_key() -> str:
     return _config_value(ENV_GROQ_API_KEY)
 
 
+def _siliconflow_timeout_from_env() -> float:
+    """读取 SiliconFlow 超时环境变量；缺省或非法值退回默认。"""
+    raw = os.environ.get(ENV_SILICONFLOW_TIMEOUT, "")
+    try:
+        value = float(raw)
+    except ValueError:
+        return DEFAULT_SILICONFLOW_TIMEOUT
+    return value if value > 0 else DEFAULT_SILICONFLOW_TIMEOUT
+
+
+def _siliconflow_api_key() -> str:
+    """读取 SiliconFlow 密钥（环境变量或部署平台 Secrets）；只读取、不回显。"""
+    return _config_value(ENV_SILICONFLOW_API_KEY)
+
+
 def get_provider(name: str | None = None):
     """按名称返回后端实例；默认读环境变量/平台 Secrets，再退回 mock。
 
@@ -494,6 +642,8 @@ def get_provider(name: str | None = None):
         return GeminiProvider()
     if chosen == PROVIDER_GROQ:
         return GroqProvider()
+    if chosen == PROVIDER_SILICONFLOW:
+        return SiliconFlowProvider()
     raise ValueError(
         f"未知模型后端: {chosen!r}，可选: {list(AVAILABLE_PROVIDERS)}"
     )
